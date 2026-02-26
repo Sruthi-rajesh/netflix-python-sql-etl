@@ -34,7 +34,7 @@ def load_raw():
     return users, titles, views
 
 def clean_users(users: pd.DataFrame) -> pd.DataFrame:
-    # Keep original schema but normalize types and fill missing
+   
     users["signup_date"] = pd.to_datetime(users["signup_date"], errors="coerce").dt.date.astype(str)
     users["country"] = users["country"].fillna("UNKNOWN")
     users["plan_type"] = users["plan_type"].fillna("UNKNOWN")
@@ -66,22 +66,15 @@ def validate_and_clean_views(views: pd.DataFrame):
     """
     v = views.copy()
 
-    # Parse timestamps + numeric fields
     v["view_start"] = pd.to_datetime(v["view_start"], errors="coerce")
     v["view_end"] = pd.to_datetime(v["view_end"], errors="coerce")
     v["watch_minutes"] = pd.to_numeric(v["watch_minutes"], errors="coerce")
 
-    # ---------------------------
-    # 1) REPAIR STEP (safe fixes)
-    # ---------------------------
 
-    # (A) Swap timestamps when end < start (common logging glitch)
     swap_mask = v["view_start"].notna() & v["view_end"].notna() & (v["view_end"] < v["view_start"])
     if swap_mask.any():
         v.loc[swap_mask, ["view_start", "view_end"]] = v.loc[swap_mask, ["view_end", "view_start"]].to_numpy()
 
-    # (B) Recompute watch_minutes when possible
-    # Recompute if watch_minutes is missing OR negative
     recalc_mask = (
         v["view_start"].notna()
         & v["view_end"].notna()
@@ -91,12 +84,10 @@ def validate_and_clean_views(views: pd.DataFrame):
         computed = ((v.loc[recalc_mask, "view_end"] - v.loc[recalc_mask, "view_start"]).dt.total_seconds() / 60.0)
         v.loc[recalc_mask, "watch_minutes"] = computed.round()
 
-    # If still negative (after recalc), mark missing to trigger reject
+    
     v.loc[v["watch_minutes"].notna() & (v["watch_minutes"] < 0), "watch_minutes"] = pd.NA
 
-    # ---------------------------
-    # 2) VALIDATION STEP
-    # ---------------------------
+  
     v["reject_reason"] = ""
 
     bad_ts = v["view_start"].isna() | v["view_end"].isna()
@@ -112,16 +103,14 @@ def validate_and_clean_views(views: pd.DataFrame):
     rejects = v[v["reject_reason"].ne("")].copy()
     cleaned = v[v["reject_reason"].eq("")].copy()
 
-    # ---------------------------
-    # 3) FINAL FORMATTING / TYPES
-    # ---------------------------
+
     cleaned["view_start"] = cleaned["view_start"].dt.strftime("%Y-%m-%d %H:%M:%S")
     cleaned["view_end"] = cleaned["view_end"].dt.strftime("%Y-%m-%d %H:%M:%S")
 
-    # watch_minutes should be int
+    
     cleaned["watch_minutes"] = cleaned["watch_minutes"].round().astype(int)
 
-    # completed might be missing -> fill and cast
+   
     if "completed" in cleaned.columns:
         cleaned["completed"] = pd.to_numeric(cleaned["completed"], errors="coerce").fillna(0).astype(int)
 
