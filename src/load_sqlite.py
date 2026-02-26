@@ -23,18 +23,17 @@ def main():
     con = connect()
     cur = con.cursor()
 
-    # Recreate tables using your schema file (sql/01_create_tables.sql)
     schema_sql = Path("sql/01_create_tables.sql").read_text(encoding="utf-8")
     cur.executescript(schema_sql)
 
-    # Load dimension tables first, then fact table
+
     load_csv(con, "users_clean.csv", "users")
     load_csv(con, "titles_clean.csv", "titles")
     load_csv(con, "views_clean.csv", "views")
 
     con.commit()
     con.close()
-    print(f"✅ SQLite DB ready: {DB_PATH.resolve()}")
+    print(f" SQLite DB ready: {DB_PATH.resolve()}")
 
 if __name__ == "__main__":
     main()
