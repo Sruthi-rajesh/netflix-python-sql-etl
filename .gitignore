@@ -8,9 +8,9 @@ data/raw/*.csv
 data/cleaned/*.csv
 data/rejects/*.csv
 
-# SQLite DB
+
 *.db
 
-# macOS
+
 .DS_Store
 
